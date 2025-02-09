@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Blog</title>
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
-
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -68,32 +64,12 @@
             background-color: #0056b3;
         }
 
-        footer {
-            background-color: #333;
-            color: white;
-            text-align: center;
-            padding: 10px 0;
-        }
-
-        .error {
-            color: red;
-        }
-
-        .post-image {
-            width: 100%;
-            margin-top: 10px;
-        }
-
         .post-list-item {
             background-color: #f9f9f9;
             padding: 15px;
             margin-bottom: 10px;
             border-radius: 5px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .post-actions button {
-            margin-right: 5px;
         }
     </style>
 </head>
@@ -104,8 +80,6 @@
             <ul>
                 <li><a href="#" onclick="showPage('home')">Home</a></li>
                 <li><a href="#" onclick="showPage('blog')">Blog</a></li>
-                <li><a href="#" onclick="showPage('about')">About</a></li>
-                <li><a href="#" onclick="showPage('contact')">Contact</a></li>
                 <li><a href="#" onclick="showPage('admin')">Admin</a></li>
             </ul>
         </nav>
@@ -121,54 +95,56 @@
         <div id="blogList"></div>
     </div>
 
-    <div id="about" class="container" style="display:none;">
-        <h2>About Us</h2>
-        <p>This is a blog where we share interesting articles and content.</p>
-    </div>
-
-    <div id="contact" class="container" style="display:none;">
-        <h2>Contact Information</h2>
-        <p>Email us at: info@myblog.com</p>
-    </div>
-
     <div id="admin" class="container" style="display:none;">
         <h2>Admin Login</h2>
         <input type="password" id="adminPassword" placeholder="Enter Admin Password">
         <button onclick="login()">Login</button>
-        <p id="error-message" class="error"></p>
+        <p id="error-message" style="color: red;"></p>
     </div>
 
     <div id="dashboard" class="container" style="display:none;">
         <h2>Admin Dashboard</h2>
         <input type="text" id="postTitle" placeholder="Post Title">
         <textarea id="postContent" placeholder="Post Content"></textarea>
-        <input type="file" id="postImage" class="post-image" accept="image/*">
         <button onclick="createPost()">Create Post</button>
         <h2>All Posts</h2>
         <div id="postList"></div>
     </div>
 
-    <footer>
-        <p>&copy; 2025 My Blog. All rights reserved.</p>
-    </footer>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
 
     <script>
-        const adminPassword = "admin123"; // Admin password for login
+        // 🔥 Firebase Configuration (Fixed)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAY9gMarczJAbg_CcScq-6SUoxF1Oadtls",
+            authDomain: "light-of-purity-4a47b.firebaseapp.com",
+            projectId: "light-of-purity-4a47b",
+            storageBucket: "light-of-purity-4a47b.appspot.com",
+            messagingSenderId: "19167719990",
+            appId: "1:19167719990:web:4b6dbe5484f13889e5de97"
+        };
+
+        // 🔥 Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const adminPassword = "admin123";
 
         function showPage(page) {
-            const pages = ['home', 'blog', 'about', 'contact', 'admin', 'dashboard'];
+            const pages = ['home', 'blog', 'admin', 'dashboard'];
             pages.forEach(p => {
                 document.getElementById(p).style.display = (p === page) ? 'block' : 'none';
             });
 
             if (page === 'blog') {
-                displayPosts(); // Ensure blog posts are shown every time blog page is opened
+                displayPosts();
             }
         }
 
         function login() {
             const password = document.getElementById('adminPassword').value;
-
             if (password === adminPassword) {
                 localStorage.setItem('adminLoggedIn', 'true');
                 alert('Login Successful!');
@@ -179,111 +155,58 @@
             }
         }
 
+        function createPost() {
+            const title = document.getElementById('postTitle').value;
+            const content = document.getElementById('postContent').value;
 
-    function createPost() {
-        const title = document.getElementById('postTitle').value;
-        const content = document.getElementById('postContent').value;
+            if (title && content) {
+                db.collection("posts").add({
+                    title: title,
+                    content: content,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                })
+                .then(() => {
+                    alert('Post created successfully!');
+                    document.getElementById('postTitle').value = "";
+                    document.getElementById('postContent').value = "";
+                    displayPosts();
+                })
+                .catch(error => {
+                    console.error("Error adding post: ", error);
+                });
+            } else {
+                alert('Please enter both title and content.');
+            }
+        }
 
-        if (title && content) {
-            db.collection("posts").add({
-                title: title,
-                content: content,
-                timestamp: Date.now()
-            })
-            .then(() => {
-                alert('Post created successfully!');
-                displayPosts();
+        function displayPosts() {
+            const postList = document.getElementById('postList');
+            const blogList = document.getElementById('blogList');
+
+            postList.innerHTML = '';
+            blogList.innerHTML = '';
+
+            db.collection("posts").orderBy("timestamp", "desc").get()
+            .then(snapshot => {
+                snapshot.forEach(doc => {
+                    const post = doc.data();
+                    const postElement = document.createElement('div');
+                    postElement.classList.add('post-list-item');
+                    postElement.innerHTML = `<h3>${post.title}</h3><p>${post.content}</p>`;
+                    blogList.appendChild(postElement);
+                    postList.appendChild(postElement.cloneNode(true));
+                });
             })
             .catch(error => {
-                console.error("Error adding post: ", error);
+                console.error("Error fetching posts:", error);
             });
-        } else {
-            alert('Please enter both title and content.');
-        }
-    }
-
-
-        function savePost(post) {
-            let posts = JSON.parse(localStorage.getItem('posts')) || [];
-            posts.push(post);
-            localStorage.setItem('posts', JSON.stringify(posts));
-
-            alert('Post created successfully!');
-            displayPosts();
-        }
-
-        
-    function displayPosts() {
-        const postList = document.getElementById('postList');
-        const blogList = document.getElementById('blogList');
-
-        postList.innerHTML = '';
-        blogList.innerHTML = '';
-
-        db.collection("posts").orderBy("timestamp", "desc").get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const post = doc.data();
-                const postElement = document.createElement('div');
-                postElement.classList.add('post-list-item');
-                postElement.innerHTML = `
-                    <h3>${post.title}</h3>
-                    <p>${post.content}</p>
-                `;
-                blogList.appendChild(postElement);
-                postList.appendChild(postElement.cloneNode(true));
-            });
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', displayPosts);
-
-
-
-        function editPost(index) {
-            const posts = JSON.parse(localStorage.getItem('posts')) || [];
-            const post = posts[index];
-            
-            document.getElementById('postTitle').value = post.title;
-            document.getElementById('postContent').value = post.content;
-            document.getElementById('postImage').value = '';  
-            posts.splice(index, 1);
-            localStorage.setItem('posts', JSON.stringify(posts));
-        }
-
-        function deletePost(index) {
-            const posts = JSON.parse(localStorage.getItem('posts')) || [];
-            posts.splice(index, 1);
-            localStorage.setItem('posts', JSON.stringify(posts));
-            displayPosts();
         }
 
         document.addEventListener('DOMContentLoaded', displayPosts);
         showPage('home');
     </script>
-
-    <script>
-        // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyBO51a-L-jxf5OP7mQH9Vd1-KvAb5VO-qY",
-  authDomain: "light-of-purity.firebaseapp.com",
-  projectId: "light-of-purity",
-  storageBucket: "light-of-purity.firebasestorage.app",
-  messagingSenderId: "1062584461465",
-  appId: "1:1062584461465:web:5a85869b7647f6b8c77008",
-  measurementId: "G-YRVKGSGJVD"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-    </script>
 </body>
 </html>
+
+
+
